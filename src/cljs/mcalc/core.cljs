@@ -3,37 +3,6 @@
             [re-frame.core :as re-frame]
             [mcalc.views :as views]))
 
-(defn calc-payments
-  []
-  (if (> calcPeriods 0)
-    (loop [loanAmount loanAmount
-           acc []
-           index 1]
-      (let [interest (* loanAmount loanMonthRate)
-            principal (- loanPayment interest)
-            taxDeduct (+ interest pmiMonthly propertyTax)
-            taxAdvantage (if (> taxDeduct standardTaxDeduction)
-                           (* (- taxDeduct standardTaxDeduction) incomeTaxRate 0.01)
-                           0)
-            pmiMonthly (if (<= loanAmount (* 0.8 fullPrice)) 0 pmiMonthly)
-            payment (+ loanPayment pmiMonthly homeInsurance propertyTax hoa)
-            data {:monthN index
-                  :principal principal
-                  :interest interest
-                  :pmi pmiMonthly
-                  :taxDeduction taxDeduct
-                  :taxAdvantage taxAdvantage
-                  :payment payment
-                  :adjustedPayment (- payment taxAdvantage)
-                  :wastedMoney (- payment taxAdvantage principal)}
-
-            acc (conj acc data)]
-        (if (= index calcPeriods)
-          acc
-          (recur (- loanAmount principal)
-            acc
-            (inc index)))))))
-
 (defn calculate
   [{:keys [fullPrice downPayment loanYears loanRate
            pmiRate propertyTaxRate incomeTaxRate standardTaxDeduction
@@ -53,7 +22,35 @@
      :loanMonthRate loanMonthRate
      :loanPayment loanPayment
      :propertyTax propertyTax
-     :payments}))
+     :payments
+     (if (> calcPeriods 0)
+       (loop [loanAmount loanAmount
+              acc []
+              index 1]
+         (let [interest (* loanAmount loanMonthRate)
+               principal (- loanPayment interest)
+               taxDeduct (+ interest pmiMonthly propertyTax)
+               taxAdvantage (if (> taxDeduct standardTaxDeduction)
+                              (* (- taxDeduct standardTaxDeduction) incomeTaxRate 0.01)
+                              0)
+               pmiMonthly (if (<= loanAmount (* 0.8 fullPrice)) 0 pmiMonthly)
+               payment (+ loanPayment pmiMonthly homeInsurance propertyTax hoa)
+               data {:monthN index
+                     :principal principal
+                     :interest interest
+                     :pmi pmiMonthly
+                     :taxDeduction taxDeduct
+                     :taxAdvantage taxAdvantage
+                     :payment payment
+                     :adjustedPayment (- payment taxAdvantage)
+                     :wastedMoney (- payment taxAdvantage principal)}
+
+               acc (conj acc data)]
+           (if (= index calcPeriods)
+             acc
+             (recur (- loanAmount principal)
+               acc
+               (inc index))))))}))
 
 (defn mount-root []
   (re-frame/clear-subscription-cache!)
